@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 
 import pytest
@@ -132,11 +133,19 @@ def test_run_bounded_respects_cwd(tmp_path):
     assert b"True" in out
 
 
-def test_run_bounded_respects_env(monkeypatch):
+def test_run_bounded_respects_env():
+    # env= fully replaces the child's environment (matches subprocess.Popen
+    # semantics; see process.py's docstring). A bare single-key env isn't
+    # guaranteed to let *any* interpreter start on Windows (it depends on
+    # OS-level variables like SystemRoot), so the base is the real
+    # environment with one variable overlaid — that isolates "is our
+    # variable visible to the child" from "can Windows launch a process
+    # with almost no environment at all".
+    child_env = {**os.environ, "KAIZEN_TEST_VAR": "hello-env"}
     code, out, _err, _timed_out, *_ = run_bounded(
         [sys.executable, "-c", "import os; print(os.environ.get('KAIZEN_TEST_VAR'))"],
         cwd=None,
-        env={"KAIZEN_TEST_VAR": "hello-env"},
+        env=child_env,
         timeout=10.0,
         max_stdout_bytes=1024,
         max_stderr_bytes=1024,
