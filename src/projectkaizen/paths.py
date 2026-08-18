@@ -42,8 +42,7 @@ def validate_contained(target: str | Path, base: str | Path) -> Path:
     target_canonical = resolve_canonical(target)
     if not is_relative_to(target_canonical, base_canonical):
         raise PathEscapeError(
-            f"Path '{target}' resolves to '{target_canonical}' which is "
-            f"outside the allowed base '{base_canonical}'."
+            f"Path '{target}' resolves to '{target_canonical}' which is outside the allowed base '{base_canonical}'."
         )
     return target_canonical
 

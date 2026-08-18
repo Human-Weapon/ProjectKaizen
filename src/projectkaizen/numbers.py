@@ -29,9 +29,7 @@ def require_int(
 ) -> int:
     label = _name(name)
     if isinstance(value, bool) or not isinstance(value, int):
-        raise ValidationError(
-            f"{label} must be an int (bool/NaN/float rejected); got {type(value).__name__}"
-        )
+        raise ValidationError(f"{label} must be an int (bool/NaN/float rejected); got {type(value).__name__}")
     if not allow_negative and value < 0:
         raise ValidationError(f"{label} must not be negative; got {value}")
     if not allow_zero and value == 0:
@@ -54,9 +52,7 @@ def require_number(
 ) -> float:
     label = _name(name)
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValidationError(
-            f"{label} must be a finite number (bool/str rejected); got {type(value).__name__}"
-        )
+        raise ValidationError(f"{label} must be a finite number (bool/str rejected); got {type(value).__name__}")
     number = float(value)
     if math.isnan(number) or math.isinf(number):
         raise ValidationError(f"{label} must be a finite number; got {value!r}")
@@ -104,9 +100,7 @@ def require_str(value: Any, *, name: str, allow_empty: bool = True) -> str:
 
 def require_bool(value: Any, *, name: str) -> bool:
     if not isinstance(value, bool):
-        raise ValidationError(
-            f"{name} must be a JSON boolean true/false; got {type(value).__name__}"
-        )
+        raise ValidationError(f"{name} must be a JSON boolean true/false; got {type(value).__name__}")
     return value
 
 

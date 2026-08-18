@@ -1,0 +1,16 @@
+{
+  "max_attempts_per_improvement": 3,
+  "default_relative_delta": 0.02,
+  "minimum_meaningful_delta": {
+    "latency_ms": 5.0
+  },
+  "output_budget": {
+    "max_findings_shown": 5,
+    "max_improvements_shown": 5,
+    "max_evidence_items_per_finding": 3,
+    "max_history_items_shown": 5,
+    "max_lessons_shown": 5
+  },
+  "diminishing_returns_window": 3,
+  "diminishing_returns_threshold_ratio": 0.3
+}

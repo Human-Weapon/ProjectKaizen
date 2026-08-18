@@ -6,7 +6,9 @@ Verification commands execute with the caller's normal permissions.
 
 from __future__ import annotations
 
+import contextlib
 import os
+import shutil
 import signal
 import subprocess
 import threading
@@ -39,8 +41,9 @@ def _kill_tree(proc: subprocess.Popen[bytes]) -> None:
     if proc.poll() is not None:  # pragma: no cover - already reaped
         return
     if os.name == "nt":
+        taskkill = shutil.which("taskkill") or "taskkill"
         subprocess.run(  # noqa: S603
-            ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+            [taskkill, "/PID", str(proc.pid), "/T", "/F"],
             capture_output=True,
             check=False,
             shell=False,
@@ -49,17 +52,13 @@ def _kill_tree(proc: subprocess.Popen[bytes]) -> None:
         try:
             os.killpg(proc.pid, signal.SIGKILL)
         except (ProcessLookupError, PermissionError, OSError):
-            try:
+            with contextlib.suppress(OSError):
                 proc.kill()
-            except OSError:
-                pass
     try:
         proc.wait(timeout=5)
     except subprocess.TimeoutExpired:  # pragma: no cover - stubborn child
-        try:
+        with contextlib.suppress(OSError):
             proc.kill()
-        except OSError:
-            pass
 
 
 def run_bounded(
@@ -123,12 +122,8 @@ def run_bounded(
         except OSError:  # pragma: no cover - reader teardown
             return
 
-    t_out = threading.Thread(
-        target=_reader, args=(proc.stdout, stdout_chunks, max_stdout_bytes, "out"), daemon=True
-    )
-    t_err = threading.Thread(
-        target=_reader, args=(proc.stderr, stderr_chunks, max_stderr_bytes, "err"), daemon=True
-    )
+    t_out = threading.Thread(target=_reader, args=(proc.stdout, stdout_chunks, max_stdout_bytes, "out"), daemon=True)
+    t_err = threading.Thread(target=_reader, args=(proc.stderr, stderr_chunks, max_stderr_bytes, "err"), daemon=True)
     t_out.start()
     t_err.start()
 

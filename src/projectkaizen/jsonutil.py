@@ -31,9 +31,7 @@ def to_jsonable(value: Any, *, name: str = "value") -> Any:
         out: dict[str, Any] = {}
         for key, item in value.items():
             if not isinstance(key, str):
-                raise ValidationError(
-                    f"{name} mapping keys must be strings; got {type(key).__name__}"
-                )
+                raise ValidationError(f"{name} mapping keys must be strings; got {type(key).__name__}")
             if key in out:
                 raise ValidationError(f"{name} has colliding mapping key {key!r}")
             out[key] = to_jsonable(item, name=f"{name}.{key}")
