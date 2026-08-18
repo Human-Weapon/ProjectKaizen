@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from projectkaizen import human
+from projectkaizen.attempt_policy import AttemptGuidance
+from projectkaizen.blast_radius import BlastRadiusCategory
+from projectkaizen.gates.fresh_evidence import EvidenceFreshness
+from projectkaizen.gates.preservation import PreservationDecision
 from projectkaizen.models import ComparisonVerdict, StoppingReason, ViabilityStatus
 from projectkaizen.release.models import ChangeCategory, ReadinessOutcome, ReleaseFindingStatus
+from projectkaizen.root_cause.base import RootCauseStrategyName
 
 
 def test_every_viability_status_has_plain_text():
@@ -56,3 +61,63 @@ def test_every_change_category_has_plain_text():
     for category in ChangeCategory:
         text = human.plain_change_category(category)
         assert text
+
+
+def test_every_evidence_freshness_has_plain_text_no_jargon():
+    for freshness in EvidenceFreshness:
+        text = human.plain_freshness(freshness)
+        assert text
+        assert "fresh" not in text.lower().split(".")[0] or freshness == EvidenceFreshness.FRESH
+
+
+def test_stale_evidence_matches_spec_example_wording():
+    text = human.plain_freshness(EvidenceFreshness.STALE)
+    assert "earlier version" in text
+    assert "run the verification again" in text.lower()
+
+
+def test_every_blast_radius_category_has_plain_text():
+    for category in BlastRadiusCategory:
+        text = human.plain_blast_radius(category, consumer_count=14)
+        assert text
+
+
+def test_cross_module_blast_radius_matches_spec_example_wording():
+    text = human.plain_blast_radius(BlastRadiusCategory.CROSS_MODULE, consumer_count=14)
+    assert "14 other files" in text
+    assert "broader regression testing" in text
+
+
+def test_every_preservation_decision_has_plain_text():
+    for decision in PreservationDecision:
+        text = human.plain_preservation(decision)
+        assert text
+
+
+def test_intent_still_valid_matches_spec_example_wording():
+    text = human.plain_preservation(PreservationDecision.INTENT_STILL_VALID)
+    assert "don't remove this yet" in text.lower()
+    assert "compatibility" not in text  # this specific example is generic, not compat-specific
+
+
+def test_do_not_remove_mentions_compatibility_platform_or_performance():
+    text = human.plain_preservation(PreservationDecision.DO_NOT_REMOVE)
+    assert "compatibility" in text.lower()
+
+
+def test_every_attempt_guidance_has_plain_text():
+    for guidance in AttemptGuidance:
+        text = human.plain_attempt_guidance(guidance)
+        assert text
+
+
+def test_architecture_review_required_matches_spec_example_wording():
+    text = human.plain_attempt_guidance(AttemptGuidance.ARCHITECTURE_REVIEW_REQUIRED)
+    assert text == (
+        "Several fixes have failed under the same assumption. Re-check the design before trying another patch."
+    )
+
+
+def test_root_cause_label_is_methodology_agnostic():
+    labels = {human.plain_root_cause_label(strategy) for strategy in RootCauseStrategyName}
+    assert labels == {"Likely cause"}  # never leaks "Five Whys"/"Fishbone"/etc.

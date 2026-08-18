@@ -11,12 +11,32 @@ This module is the one place that gap gets closed: every function here
 takes a typed internal value and returns a plain English sentence, never
 the reverse. Nothing upstream of the CLI's text-rendering branch should
 need to know this module exists.
+
+Translations for engines the default CLI commands don't currently surface
+(fresh-evidence, blast radius, preservation, attempt-policy, root-cause
+strategy names) import their enum types lazily, inside each function, not
+at module scope. `cli.py` imports this module unconditionally for the
+translations it *does* use every run (viability/stopping/verdict/
+readiness/finding-status/change-category) — without the lazy imports here,
+that single top-level import would transitively load every optional
+engine's module for every command, which is exactly the "unused engine
+execution" this codebase's own build spec prohibits. See
+tests/test_engines_stay_conditional.py.
 """
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from .models import ComparisonVerdict, StoppingReason, ViabilityStatus
 from .release.models import ChangeCategory, ReadinessOutcome, ReleaseFindingStatus
+
+if TYPE_CHECKING:
+    from .attempt_policy import AttemptGuidance
+    from .blast_radius import BlastRadiusCategory
+    from .gates.fresh_evidence import EvidenceFreshness
+    from .gates.preservation import PreservationDecision
+    from .root_cause.base import RootCauseStrategyName
 
 _VIABILITY_PLAIN: dict[ViabilityStatus, str] = {
     ViabilityStatus.VIABLE: "worth doing",
@@ -112,3 +132,83 @@ _CHANGE_CATEGORY_PLAIN: dict[ChangeCategory, str] = {
 
 def plain_change_category(category: ChangeCategory) -> str:
     return _CHANGE_CATEGORY_PLAIN[category]
+
+
+def plain_freshness(freshness: EvidenceFreshness) -> str:
+    from .gates.fresh_evidence import EvidenceFreshness as _EvidenceFreshness
+
+    table: dict[_EvidenceFreshness, str] = {
+        _EvidenceFreshness.FRESH: "The test results are for this exact change and can be trusted.",
+        _EvidenceFreshness.STALE: (
+            "The available test results belong to an earlier version. Run the verification again "
+            "before accepting this change."
+        ),
+        _EvidenceFreshness.UNBOUND: (
+            "There's no way to confirm what these test results were actually run against. "
+            "Run the verification again before accepting this change."
+        ),
+        _EvidenceFreshness.INSUFFICIENT: (
+            "Someone reported testing this by hand, but that can't be automatically confirmed. "
+            "Run the verification again before accepting this change."
+        ),
+    }
+    return table[freshness]
+
+
+def plain_blast_radius(category: BlastRadiusCategory, *, consumer_count: int) -> str:
+    from .blast_radius import BlastRadiusCategory as _BlastRadiusCategory
+
+    if category == _BlastRadiusCategory.LOCAL:
+        return "This change is self-contained and doesn't appear to affect anything else."
+    if category == _BlastRadiusCategory.BOUNDED:
+        return f"This change affects {consumer_count} other file(s) — a focused check should be enough."
+    if category == _BlastRadiusCategory.CROSS_MODULE:
+        return f"This change affects {consumer_count} other files, so it needs broader regression testing."
+    if category == _BlastRadiusCategory.CROSS_SYSTEM:
+        return (
+            "This change touches a public interface or saved-data format, "
+            "so anything depending on it could be affected."
+        )
+    return "It isn't clear yet what this change affects - more investigation is needed before judging its impact."
+
+
+def plain_preservation(decision: PreservationDecision) -> str:
+    from .gates.preservation import PreservationDecision as _PreservationDecision
+
+    table: dict[_PreservationDecision, str] = {
+        _PreservationDecision.SAFE_TO_CHANGE: "Nothing found depends on this, so it looks safe to change or remove.",
+        _PreservationDecision.REQUIRES_MORE_CONTEXT: (
+            "Not enough is known yet about who depends on this to change it safely."
+        ),
+        _PreservationDecision.INTENT_STILL_VALID: (
+            "Don't remove this yet. There's a documented reason it exists, and nothing suggests that "
+            "reason no longer applies."
+        ),
+        _PreservationDecision.DO_NOT_REMOVE: (
+            "Do not remove this. It protects a compatibility, platform, or performance requirement."
+        ),
+    }
+    return table[decision]
+
+
+def plain_attempt_guidance(guidance: AttemptGuidance) -> str:
+    from .attempt_policy import AttemptGuidance as _AttemptGuidance
+
+    table: dict[_AttemptGuidance, str] = {
+        _AttemptGuidance.CONTINUE: "Take another look at the evidence before trying again.",
+        _AttemptGuidance.REDUCE_CONFIDENCE: (
+            "Two attempts have failed - treat the suspected cause as less certain and re-check it."
+        ),
+        _AttemptGuidance.ARCHITECTURE_REVIEW_REQUIRED: (
+            "Several fixes have failed under the same assumption. Re-check the design before trying another patch."
+        ),
+        _AttemptGuidance.REOPENED: "New information justifies another attempt.",
+    }
+    return table[guidance]
+
+
+def plain_root_cause_label(_strategy: RootCauseStrategyName) -> str:
+    """Every root-cause strategy — Five Whys, Fishbone, A3, whichever was
+    used — reads the same to a user who never asked to know the
+    methodology name: "Likely cause"."""
+    return "Likely cause"
