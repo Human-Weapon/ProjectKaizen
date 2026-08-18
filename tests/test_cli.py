@@ -94,7 +94,7 @@ def test_plan_shows_only_actionable_findings(tmp_path, capsys):
     rc = main(["plan", str(tmp_path)])
     out = capsys.readouterr().out
     assert rc in (EXIT_SUCCESS, EXIT_ATTENTION)
-    assert "improvements" in out
+    assert "improvement opportunities" in out
 
 
 def test_status_clean_project_is_stable(tmp_path, capsys):
@@ -102,7 +102,15 @@ def test_status_clean_project_is_stable(tmp_path, capsys):
     rc = main(["status", str(tmp_path)])
     out = capsys.readouterr().out
     assert rc == EXIT_SUCCESS
-    assert "kaizen stable: True" in out
+    assert "Nothing worthwhile left to improve" in out
+
+
+def test_status_plain_language_has_no_raw_jargon_by_default(tmp_path, capsys):
+    _mkfile(tmp_path / "a.py", "x = 1\n")
+    main(["status", str(tmp_path)])
+    out = capsys.readouterr().out
+    assert "kaizen_stable" not in out
+    assert "marginal_ceiling" not in out
 
 
 def test_baseline_requires_at_least_one_metric(tmp_path, capsys):
@@ -141,12 +149,12 @@ def test_compare_accept_and_reject(tmp_path, capsys):
     rc_accept = main(["compare", str(baseline), str(candidate_good)])
     assert rc_accept == EXIT_SUCCESS
     out = capsys.readouterr().out
-    assert "verdict: accept" in out
+    assert "improvement and can be kept" in out
 
     rc_reject = main(["compare", str(baseline), str(candidate_bad)])
     assert rc_reject == EXIT_ATTENTION
     out = capsys.readouterr().out
-    assert "verdict: reject" in out
+    assert "should not be kept" in out
 
 
 def test_compare_json_pure(tmp_path, capsys):

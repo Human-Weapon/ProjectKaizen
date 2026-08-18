@@ -16,6 +16,7 @@ from ..walker import WalkResult
 from . import (
     ai_agent_readiness,
     architecture,
+    architecture_depth,
     code_health,
     dependencies,
     developer_experience,
@@ -28,6 +29,7 @@ AnalyzerFunc = Callable[..., AnalysisResult]
 
 ALL_ANALYZERS: dict[str, AnalyzerFunc] = {
     architecture.ANALYZER_NAME: architecture.analyze,
+    architecture_depth.ANALYZER_NAME: architecture_depth.analyze,
     code_health.ANALYZER_NAME: code_health.analyze,
     test_health.ANALYZER_NAME: test_health.analyze,
     documentation.ANALYZER_NAME: documentation.analyze,
@@ -36,6 +38,11 @@ ALL_ANALYZERS: dict[str, AnalyzerFunc] = {
     developer_experience.ANALYZER_NAME: developer_experience.analyze,
     ai_agent_readiness.ANALYZER_NAME: ai_agent_readiness.analyze,
 }
+
+#: git_hotspots.analyze_git_hotspots is intentionally NOT in this registry —
+#: it is the one analyzer that runs a real subprocess (git log), so it stays
+#: opt-in rather than something every `inspect` silently executes. See its
+#: module docstring.
 
 
 def run_all(walk: WalkResult, *, config: KaizenConfig, project_area_id: str = "root") -> tuple[AnalysisResult, ...]:

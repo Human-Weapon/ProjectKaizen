@@ -29,6 +29,14 @@ from .config import KaizenConfig
 from .exceptions import ConfigurationError, ProjectKaizenError
 from .fingerprint import deterministic_id
 from .history import HistoryLog
+from .human import (
+    plain_change_category,
+    plain_finding_status,
+    plain_readiness_outcome,
+    plain_stopping_reasons,
+    plain_verdict,
+    plain_viability,
+)
 from .jsonutil import to_jsonable
 from .models import (
     AnalysisResult,
@@ -43,6 +51,7 @@ from .models import (
 from .output import OutputMode, build_findings_display
 from .persistence import read_json_document, write_json_document
 from .prioritize import rank_findings
+from .release import evaluate_readiness, resolve_scope
 from .stopping import evaluate_stopping
 from .viability import ViabilityInputs, assess_viability
 from .walker import walk_project
@@ -246,10 +255,12 @@ def cmd_plan(args: argparse.Namespace, config: KaizenConfig) -> int:
         )
     else:
         print(f"status: {status.value}")
-        print(display.summary.replace("findings detected", "viable/marginal improvements"))
+        print(display.summary.replace("findings detected", "improvement opportunities"))
         for f in display.compressed.shown:
             v = viabilities[f.id]
-            print(f"  [{v.status.value:>11}] {f.title} ({f.id}) - {v.rationale}")
+            print(f"  [{plain_viability(v.status)}] {f.title}")
+            if args.full:
+                print(f"      technical: {v.status.value} - {v.rationale}")
 
     if status == AnalysisStatus.ANALYSIS_INCOMPLETE:
         return EXIT_INCOMPLETE
@@ -394,10 +405,12 @@ def cmd_compare(args: argparse.Namespace, config: KaizenConfig) -> int:
             }
         )
     else:
-        print(f"verdict: {result.verdict.value}")
+        print(plain_verdict(result.verdict))
         print(result.rationale)
         if result.rollback_guidance:
-            print(f"rollback guidance: {result.rollback_guidance}")
+            print(result.rollback_guidance)
+        if args.full:
+            print(f"technical verdict: {result.verdict.value}")
 
     if result.verdict.value == "accept":
         return EXIT_SUCCESS
@@ -449,11 +462,17 @@ def cmd_status(args: argparse.Namespace, config: KaizenConfig) -> int:
             }
         )
     else:
-        print(f"analysis status: {status.value}")
-        print(f"kaizen stable: {decision.stable}")
+        if decision.stable:
+            print("Nothing worthwhile left to improve right now.")
+        else:
+            print("There is still worthwhile improvement work to do.")
         if decision.reasons:
-            print(f"reasons: {', '.join(r.value for r in decision.reasons)}")
-        print(decision.rationale)
+            print(f"Why: {plain_stopping_reasons(decision.reasons)}.")
+        if args.full:
+            print(f"technical status: analysis={status.value} kaizen_stable={decision.stable}")
+            if decision.reasons:
+                print(f"technical reasons: {', '.join(r.value for r in decision.reasons)}")
+            print(f"technical rationale: {decision.rationale}")
 
     if status == AnalysisStatus.ANALYSIS_INCOMPLETE:
         return EXIT_INCOMPLETE
@@ -531,6 +550,58 @@ def cmd_validate(args: argparse.Namespace, config: KaizenConfig) -> int:
     return EXIT_SUCCESS
 
 
+def cmd_release_readiness(args: argparse.Namespace, config: KaizenConfig) -> int:
+    project_root = args.path
+    scope = resolve_scope(project_root, base_ref=args.base, target_ref=args.target or "HEAD")
+    report = evaluate_readiness(project_root, scope=scope)
+
+    if args.json:
+        _print_json(
+            {
+                "command": "release-readiness",
+                "outcome": report.outcome,
+                "rationale": report.rationale,
+                "confidence": report.confidence,
+                "changed_file_count": report.changed_file_count,
+                "scope": {
+                    "base": {"ref": report.scope.base.ref, "sha": report.scope.base.sha} if report.scope.base else None,
+                    "target": {"ref": report.scope.target.ref, "sha": report.scope.target.sha},
+                    "dirty_worktree": report.scope.dirty_worktree,
+                    "confidence": report.scope.confidence,
+                },
+                "findings": [
+                    {
+                        "id": f.id,
+                        "category": f.category,
+                        "title": f.title,
+                        "description": f.description,
+                        "status": f.status,
+                        "affected_paths": f.affected_paths,
+                    }
+                    for f in report.findings
+                ],
+            }
+        )
+    else:
+        print(plain_readiness_outcome(report.outcome))
+        if report.scope.base:
+            base, target = report.scope.base, report.scope.target
+            print(f"Compared {base.ref} to {target.ref} ({report.changed_file_count} file(s) changed).")
+        else:
+            print(report.rationale)
+        for f in report.findings:
+            print(f"  [{plain_finding_status(f.status)}] {plain_change_category(f.category)}: {f.description}")
+        if args.full:
+            print(f"technical outcome: {report.outcome.value}")
+            print(f"technical rationale: {report.rationale}")
+
+    if report.outcome.value == "blocked":
+        return EXIT_ATTENTION
+    if report.outcome.value == "needs_confirmation":
+        return EXIT_INCOMPLETE
+    return EXIT_SUCCESS
+
+
 def _build_global_opts_parser(*, suppress_defaults: bool) -> argparse.ArgumentParser:
     """--json/--full/--config work both before AND after the subcommand.
 
@@ -596,6 +667,13 @@ def build_parser() -> argparse.ArgumentParser:
     validate_parser = subparsers.add_parser("validate", parents=[_build_global_opts_parser(suppress_defaults=True)])
     validate_parser.add_argument("artifact")
 
+    release_parser = subparsers.add_parser(
+        "release-readiness", parents=[_build_global_opts_parser(suppress_defaults=True)]
+    )
+    release_parser.add_argument("path", nargs="?", default=".")
+    release_parser.add_argument("--base", default=None, help="explicit base ref (default: latest usable tag, if any)")
+    release_parser.add_argument("--target", default=None, help="explicit target ref (default: HEAD)")
+
     return parser
 
 
@@ -608,6 +686,7 @@ _HANDLERS = {
     "status": cmd_status,
     "history": cmd_history,
     "validate": cmd_validate,
+    "release-readiness": cmd_release_readiness,
 }
 
 

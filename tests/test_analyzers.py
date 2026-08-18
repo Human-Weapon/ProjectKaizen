@@ -27,8 +27,8 @@ def _mkfile(path, content: str = "x") -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def test_registry_covers_eight_analyzers():
-    assert len(ALL_ANALYZERS) == 8
+def test_registry_covers_nine_analyzers():
+    assert len(ALL_ANALYZERS) == 9
 
 
 def test_run_all_is_deterministic_order(tmp_path, config):
