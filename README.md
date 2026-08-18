@@ -62,6 +62,22 @@ None of the above are required dependencies. `import projectkaizen` and the
 CLI work completely standalone, offline, with no API keys, no LLM calls, and
 no network access.
 
+## Ecosystem
+
+ProjectKaizen is part of the HERMES OSS ecosystem (**useful alone, better
+together**): [PromptGraph](https://github.com/Human-Weapon/PromptGraph)
+(context compilation), [AgentGear](https://github.com/Human-Weapon/AgentGear)
+(execution routing), [SkillGuard](https://github.com/Human-Weapon/SkillGuard)
+(security/behavior auditing), [AgentBench](https://github.com/Human-Weapon/AgentBench)
+(benchmarking), **ProjectKaizen** (continuous improvement — this project).
+ProjectKaizen has no hard dependency on any of them; it consumes plain
+baseline/candidate metrics and evidence from wherever they came from, and
+degrades gracefully if a sibling isn't installed.
+
+> **Note:** ProjectKaizen v0.1.0 is a release candidate awaiting its first
+> independent adversarial audit — see [`docs/audits/`](docs/audits/). No git
+> tag, GitHub Release, or PyPI publish has been made yet.
+
 ## Installation
 
 ```bash
