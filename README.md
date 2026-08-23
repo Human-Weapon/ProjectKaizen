@@ -40,8 +40,9 @@ got better, and when is further improvement no longer worth the cost?**
 
 ## What it does NOT do
 
-ProjectKaizen is one tool in a five-tool ecosystem (*useful alone, better
-together*) and deliberately does not duplicate its neighbors:
+ProjectKaizen is one of five independent tools in the HERMES OSS collection
+(*useful alone, better together* — see "Ecosystem" below) and deliberately
+does not duplicate its neighbors:
 
 - It does not compile agent context, extract requirements, or manage a
   context graph/token budget (that's **PromptGraph**).
@@ -64,13 +65,26 @@ no network access.
 
 ## Ecosystem
 
-ProjectKaizen is part of the HERMES OSS ecosystem (**useful alone, better
+ProjectKaizen is part of the HERMES OSS collection (**useful alone, better
 together**): [PromptGraph](https://github.com/Human-Weapon/PromptGraph)
 (context compilation), [AgentGear](https://github.com/Human-Weapon/AgentGear)
 (execution routing), [SkillGuard](https://github.com/Human-Weapon/SkillGuard)
 (security/behavior auditing), [AgentBench](https://github.com/Human-Weapon/AgentBench)
 (benchmarking), **ProjectKaizen** (continuous improvement — this project).
-ProjectKaizen has no hard dependency on any of them; it consumes plain
+
+> **About HERMES OSS:** HERMES OSS is the name used for this collection of
+> five independent open-source tools. There is no separate HERMES package,
+> private runner, hidden orchestrator, or required sixth component. Each
+> tool works standalone. "Better together" means the optional interoperability
+> below, not a required central runtime or an automated five-tool pipeline.
+
+| Relationship | Status | Notes |
+|---|---|---|
+| AgentBench → ProjectKaizen | Manual / data-level | `compare`/`baseline` accept plain baseline/candidate metric numbers from any source, including an AgentBench `summary.json`/`comparison.json` you point at explicitly. There is no automatic adapter. |
+| PromptGraph / AgentGear / SkillGuard | Not integrated | ProjectKaizen does not read from or write to these tools. |
+| Full five-tool pipeline | Not provided | No `hermes run`/`hermes orchestrate` or equivalent central runner exists. |
+
+ProjectKaizen has no hard dependency on any sibling; it consumes plain
 baseline/candidate metrics and evidence from wherever they came from, and
 degrades gracefully if a sibling isn't installed.
 
@@ -133,10 +147,10 @@ and dependency cycles are detected explicitly rather than crashing.
 
 ProjectKaizen optionally persists artifacts under `.agentops/kaizen/` inside
 the inspected project (`inspect --persist`, `baseline`, `compare --record`).
-`.agentops/` is an interoperability convention shared with sibling tools in
-the ecosystem, not a sixth project — ProjectKaizen reads only its own
-`kaizen/` subdirectory and fails cleanly (never silently) if it's absent or
-corrupt.
+`.agentops/` is a shared directory *convention*, not a central HERMES
+service or database — each tool owns and validates only its own
+subdirectory. ProjectKaizen reads only its own `kaizen/` subdirectory and
+fails cleanly (never silently) if it's absent or corrupt.
 
 ## Security model and limitations
 

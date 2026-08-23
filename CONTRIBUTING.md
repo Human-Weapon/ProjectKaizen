@@ -1,6 +1,6 @@
 # Contributing to ProjectKaizen
 
-Thanks for considering contributing. ProjectKaizen is part of the HERMES OSS ecosystem. By participating you agree to: **USEFUL ALONE + BETTER TOGETHER**, evidence over confidence, and no analysis without decision value.
+Thanks for considering contributing. ProjectKaizen is part of the HERMES OSS collection — a collection label for five independent tools, not a required runtime or dependency. By participating you agree to: **USEFUL ALONE + BETTER TOGETHER**, evidence over confidence, and no analysis without decision value.
 
 ## Before you start
 
