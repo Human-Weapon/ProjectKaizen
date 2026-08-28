@@ -9,7 +9,7 @@ description = "Continuous-improvement toolkit for software and AI-agent projects
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.14"
 authors = [{ name = "Human-Weapon" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -20,6 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Quality Assurance",
 ]
 dependencies = []
