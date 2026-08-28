@@ -214,9 +214,45 @@ def test_repository_hygiene_flags_env_file(tmp_path, config):
 
 
 def test_developer_experience_flags_missing_packaging(tmp_path, config):
+    _mkfile(tmp_path / "main.py", "def main():\n    return 0\n")
     walk = _walk(tmp_path)
     result = developer_experience.analyze(walk, config=config)
     assert any("packaging" in f.title for f in result.findings)
+
+
+def test_developer_experience_ignores_tooling_only_python_in_static_web_game(tmp_path, config):
+    _mkfile(tmp_path / "index.html", "<main id='game'></main>\n")
+    _mkfile(tmp_path / "src" / "game.js", "export const start = () => {};\n")
+    _mkfile(tmp_path / "src" / "boss.js", "export const boss = {};\n")
+    _mkfile(tmp_path / "src" / "weapons.js", "export const weapons = [];\n")
+    _mkfile(tmp_path / "assets" / "player.png")
+    _mkfile(tmp_path / "assets" / "boss.png")
+    _mkfile(tmp_path / "tools" / "benchmark.py", "def benchmark():\n    return 1\n")
+    _mkfile(tmp_path / "tests" / "benchmark_runner.py", "def test_benchmark():\n    assert True\n")
+
+    result = developer_experience.analyze(_walk(tmp_path), config=config)
+
+    assert not any("no standard Python packaging" in f.title for f in result.findings)
+
+
+def test_developer_experience_flags_missing_packaging_for_python_package(tmp_path, config):
+    _mkfile(tmp_path / "game" / "__init__.py", "")
+    _mkfile(tmp_path / "game" / "boss.py", "class Boss:\n    pass\n")
+
+    result = developer_experience.analyze(_walk(tmp_path), config=config)
+
+    assert any("no standard Python packaging" in f.title for f in result.findings)
+
+
+def test_developer_experience_flags_missing_packaging_for_mixed_python_package(tmp_path, config):
+    _mkfile(tmp_path / "index.html", "<main id='game'></main>\n")
+    _mkfile(tmp_path / "src" / "game.js", "export const start = () => {};\n")
+    _mkfile(tmp_path / "service" / "__init__.py", "")
+    _mkfile(tmp_path / "service" / "combat.py", "def apply_damage():\n    return 1\n")
+
+    result = developer_experience.analyze(_walk(tmp_path), config=config)
+
+    assert any("no standard Python packaging" in f.title for f in result.findings)
 
 
 def test_developer_experience_packaging_present_no_finding(tmp_path, config):
